@@ -41,6 +41,7 @@ export const formServerAction = async (prevState: {}, formData: FormData) => {
         content,
         userId: 1,
     });
+    revalidatePath("/", "layout");
     redirect("/feed");
 };
 
