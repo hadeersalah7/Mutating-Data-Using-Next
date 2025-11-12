@@ -1,8 +1,10 @@
 "use server";
 import { uploadImage } from "@/lib/cloudinary";
-import { storePost } from "@/lib/posts";
+import { storePost, updatePostLikeStatus } from "@/lib/posts";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+// Add Post Form Server Action:
 export const formServerAction = async (prevState: {}, formData: FormData) => {
     const title = formData.get("title") as string;
     const image = formData.get("image");
@@ -41,3 +43,10 @@ export const formServerAction = async (prevState: {}, formData: FormData) => {
     });
     redirect("/feed");
 };
+
+
+// Liked Button Server Action:
+export const likeButtonServerAction = async (postId: number, userId: number) => {
+    await updatePostLikeStatus(postId, userId = 2);
+    revalidatePath("/", "layout")
+}
