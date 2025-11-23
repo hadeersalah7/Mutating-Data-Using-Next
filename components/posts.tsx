@@ -1,28 +1,51 @@
-"use client"
-import { formatDate } from '@/lib/format';
-import LikeButton from './like-icon';
-import { likeButtonServerAction } from '@/utils/ServerActions';
-import { useOptimistic } from 'react';
-import Image from 'next/image';
+"use client";
+import { formatDate } from "@/lib/format";
+import LikeButton from "./like-icon";
+import { likeButtonServerAction } from "@/utils/ServerActions";
+import { useOptimistic } from "react";
+import Image from "next/image";
 function Post({ post, action }) {
+  interface ImageLoaderConfig {
+    src: string;
+    width: number;
+    quality?: number;
+  }
+
+  const loaderImage = (config: ImageLoaderConfig): string => {
+    const urlStart = config.src.split('/upload')[0]
+    const urlEnd = config.src.split('/upload')[1]
+    const transformations = `w_200,q_${config.quality}`
+    return `${urlStart}/upload/${transformations}/${urlEnd}`;
+  };
   return (
     <article className="post">
       <div className="post-image">
-        <Image src={post.image} fill alt={post.title} />
+        <Image
+          loader={loaderImage}
+          src={post.image}
+          height={120}
+          width={200}
+          alt={post.title}
+          priority
+          quality={50}
+        />
       </div>
       <div className="post-content">
         <header>
           <div>
             <h2>{post.title}</h2>
             <p>
-              Shared by {post.userFirstName} on{' '}
+              Shared by {post.userFirstName} on{" "}
               <time dateTime={post.createdAt}>
                 {formatDate(post.createdAt)}
               </time>
             </p>
           </div>
           <div>
-            <form action={action.bind(null, post.id)} className={post.isLiked ? "liked" : ""}>
+            <form
+              action={action.bind(null, post.id)}
+              className={post.isLiked ? "liked" : ""}
+            >
               <LikeButton />
             </form>
           </div>
@@ -34,25 +57,30 @@ function Post({ post, action }) {
 }
 
 export default function Posts({ posts }) {
-  const [optimisticPosts, updateOptimistic] = useOptimistic(posts, (prevPosts, updatedPostId)=>{
-    const updatedPostIndex = prevPosts.findIndex((post) => post.id === updatedPostId)
-    if (updatedPostIndex === -1) {
-      return prevPosts
+  const [optimisticPosts, updateOptimistic] = useOptimistic(
+    posts,
+    (prevPosts, updatedPostId) => {
+      const updatedPostIndex = prevPosts.findIndex(
+        (post) => post.id === updatedPostId
+      );
+      if (updatedPostIndex === -1) {
+        return prevPosts;
+      }
+      const updatedPost = { ...prevPosts[updatedPostIndex] };
+      updatedPost.likes = updatedPost.likes + (updatedPost.isLiked ? -1 : 1);
+      updatedPost.isLiked = !updatedPost.isLiked;
+      const newPosts = [...prevPosts];
+      newPosts[updatedPostIndex] = updatedPost;
+      return newPosts;
     }
-    const updatedPost = { ...prevPosts[updatedPostIndex] }
-    updatedPost.likes = updatedPost.likes + (updatedPost.isLiked ? -1 : 1)
-    updatedPost.isLiked = !updatedPost.isLiked
-    const newPosts = [...prevPosts]
-    newPosts[updatedPostIndex] = updatedPost
-    return newPosts
-  })
+  );
   if (!optimisticPosts || optimisticPosts.length === 0) {
     return <p>There are no posts yet. Maybe start sharing some?</p>;
   }
 
   async function updateLikePostAction(postId: number) {
-    updateOptimistic(postId)
-    await likeButtonServerAction(postId, 2)
+    updateOptimistic(postId);
+    await likeButtonServerAction(postId, 2);
   }
   return (
     <ul className="posts">
